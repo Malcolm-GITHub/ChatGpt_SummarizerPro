@@ -1,0 +1,825 @@
+Perfect — thanks for breaking that down! You’re doing great, and we’ll take this step-by-step, totally beginner-friendly, using the method from the lamadotcare repo.
+
+This guide will walk you through creating a 32-bit EFI bootloader (bootia32.efi) using a custom-built GRUB.
+
+🛠️ What We’re Building
+We’re going to:
+Install all the dependencies.
+Clone the GRUB source code.
+Build GRUB as a 32-bit UEFI app.
+Generate the final bootia32.efi file.
+Show you what to do with it.
+
+🐧 Step 0: Use a Linux System
+Are you on Linux already? If not, install a Linux distro. I recommend Ubuntu or Linux Mint.
+If you're on Windows, use:
+🖥️ WSL (Windows Subsystem for Linux) – fastest way (Ubuntu in Microsoft Store).
+Or boot from a USB Linux live stick.
+
+Let me know if you need help setting up WSL or Linux — I can walk you through it.
+✅ Step 1: Install Dependencies
+Open your terminal and run:
+sudo apt update
+sudo apt install git bison libopts25 libselinux1-dev autogen m4 \
+autoconf help2man libopts25-dev flex libfont-freetype-perl automake \
+autotools-dev libfreetype6-dev texinfo
+This installs everything we need to build GRUB from source.
+
+📦 Step 2: Clone GRUB Source Code
+Now, let’s grab the source code for GRUB (the bootloader we’ll modify):
+
+
+cd grub
+🏗️ Step 3: Build GRUB for 32-bit UEFI
+Now we’ll configure and build GRUB. Still in the grub folder, run:
+
+./bootstrap
+./autogen.sh
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+This will take a few minutes. It’s building GRUB for the i386 (32-bit) UEFI platform.
+
+🧪 Step 4: Create the EFI File
+Once the build finishes, go into the GRUB core folder and generate bootia32.efi:
+
+cd grub-core
+../grub-mkimage -d . -o bootia32.efi -O i386-efi -p /boot/grub \
+ntfs hfs appleldr boot cat efi_gop efi_uga elf fat hfsplus iso9660 linux \
+keylayouts memdisk minicmd part_apple ext2 extcmd xfs xnu part_bsd part_gpt \
+search search_fs_file chain btrfs loadbios loadenv lvm minix minix2 reiserfs \
+memrw mmap msdospart scsi loopback normal configfile gzio all_video \
+gfxterm gettext echo eval
+This creates a bootia32.efi file — the 32-bit UEFI bootloader that can load a variety of filesystems and OS kernels.
+
+✅ You did it! You just built a custom EFI bootloader from scratch.
+
+📁 Step 5: Put bootia32.efi on a USB Drive
+Plug in a USB stick and format it to FAT32 (you can do this in Ubuntu’s Disks app or GParted).
+
+Mount it, and create the proper folder structure:
+
+mkdir -p /media/$USER/YOUR_USB/EFI/BOOT
+cp bootia32.efi /media/$USER/YOUR_USB/EFI/BOOT/
+🔁 Replace YOUR_USB with your USB label, or mount manually using sudo mount.
+
+Once done, your USB will have:
+
+markdown
+EFI/
+└── BOOT/
+    └── bootia32.efi
+This is the standard EFI boot path for removable media — UEFI firmware looks here when booting from USB.
+
+🧪 Step 6: Test It!
+Option 1: Boot It on Real Hardware (with 32-bit UEFI)
+Plug the USB into your target device (like a tablet or netbook).
+
+Enter the UEFI/BIOS setup (usually F2/F12/Delete on boot).
+
+Choose your USB device to boot.
+
+You should see GRUB start (black screen with GRUB command line or menu).
+
+Option 2: Test in QEMU
+Install QEMU and OVMF:
+
+sudo apt install qemu ovmf
+Then test with:
+
+qemu-system-i386 -bios /usr/share/OVMF/OVMF_CODE_32.fd -drive format=raw,file=fat:rw:/path/to/your/usb
+🚫 Can I Boot 64-bit Windows With This?
+Sadly, no. Windows 64-bit requires a 64-bit UEFI firmware. This loader won’t trick it.
+
+However, you can:
+
+Boot 64-bit Linux with this setup (many distros support booting 64-bit kernel from 32-bit EFI).
+
+Use it as a rescue, diagnostic, or multi-boot tool with GRUB.
+
+🧰 Optional: Automate It
+You could also just use bootstrap.sh and build.sh from the lamadotcare repo:
+
+chmod +x bootstrap.sh build.sh
+./bootstrap.sh
+./build.sh
+This does all the above in two steps.
+
+
+so if you want to change to 64bit bootx64.efi creation then you need to clean your existing grub build
+Ah, that’s a crucial point! 👇
+If you never ran:
+./configure --with-platform=efi --target=x86_64 --program-prefix=""
+…then your current GRUB build is still configured for 32-bit (i386-efi). So even if you tried to run grub-mkimage -O x86_64-efi, it would likely fail or produce a broken bootx64.efi.
+
+🔥 Why This Matters:
+./configure --target=i386 builds tools for 32-bit UEFI like bootia32.efi.
+./configure --target=x86_64 is required to build 64-bit UEFI like bootx64.efi.
+They are separate targets, and GRUB must be reconfigured accordingly before compiling each.
+
+✅ What You Should Do Now:
+Clean the old build:
+make clean
+Reconfigure for 64-bit:
+./configure --with-platform=efi --target=x86_64 --program-prefix=""
+Build GRUB again:
+make
+Then generate the 64-bit EFI file:
+cd grub-core
+../grub-mkimage -d . -o bootx64.efi -O x86_64-efi -p /boot/grub \
+ntfs fat part_gpt iso9660 configfile normal chain search search_fs_file \
+echo gfxterm all_video
+cp bootx64.efi /mnt/usb/EFI/BOOT/
+
+
+---
+
+Skip to content
+ChatGPT
+Log in
+Sign up
+Awesome! Thanks for sharing that — looks like you’ve got the full roadmap for building a 32-bit UEFI bootloader using GRUB, nice and clean. 💻🚀
+Are you ready to pick it up from here? Or want to go deeper into any step — like:
+🧰 Automating the build (tweaking build.sh / bootstrap.sh)
+🎛️ Customizing the GRUB menu to actually boot a Linux ISO
+🧪 Testing more OSes (maybe Debian, Arch, or a lightweight distro)
+🧩 Dual-booting with something funky — like Android x86 or BlissOS?
+💡 Or even just turning this into a rescue USB tool?
+Let me know where you're at in the process — happy to keep it beginner-friendly and help you build something slick.
+all sent well until this Fetched 33.3 MB in 14s (2381 kB/s) Reading package lists... Done Building dependency tree... Done Reading state information... Done 148 packages can be upgraded. Run 'apt list --upgradable' to see them. mal@DESKTOP-68R02G0:~$ sudo apt install git bison libselinux-dev autogen m4 \ > autoconfig help2man libopt25-dev flex libfont-freetype-perl automake \ > autotools-dev libfreetype6-dev texinfo Reading package lists... Done Building dependency tree... Done Reading state information... Done Note, selecting 'libselinux1-dev' instead of 'libselinux-dev' Note, selecting 'libfreetype-dev' instead of 'libfreetype6-dev' E: Unable to locate package autoconfig E: Unable to locate package libopt25-dev
+Great catch! You're super close — just a couple of small typos in the package names. Here's the fix:
+
+✅ Corrected Package Names:
+autoconfig → autoconf ✅
+libopt25-dev → libopts25-dev ✅ (note the s at the end of opts)
+
+🔧 Updated Command:
+Run this instead:
+sudo apt update
+sudo apt install git bison libopts25 libselinux1-dev autogen m4 \
+autoconf help2man libopts25-dev flex libfont-freetype-perl automake \
+autotools-dev libfreetype-dev texinfo
+
+Once that finishes cleanly, you’re good to go to the next step (cloning GRUB).
+Let me know if any of those packages still complain — WSL sometimes misses a couple depending on the distro version. I’ve got workarounds if needed. 👨‍💻💪
+Want me to help you with the GRUB build step next or just chill while you test this?
+Cloning into 'grub'... remote: Counting objects: 103532, done. remote: Compressing objects: 100% (24318/24318), done. remote: Total 103532 (delta 77475), reused 102572 (delta 76760) Receiving objects: 100% (103532/103532), 72.41 MiB | 103.00 KiB/s, done. Resolving deltas: 100% (77475/77475), done. Updating files: 100% (1929/1929), done. mal@DESKTOP-68R02G0:~$ cd grub mal@DESKTOP-68R02G0:~/grub$ ./autogen.sh Gnulib not yet bootstrapped; run ./bootstrap instead. mal@DESKTOP-68R02G0:~/grub$
+Perfect — you're flying through this! 🚀
+GRUB's telling you that instead of running ./autogen.sh directly, you need to bootstrap it first (basically setting up the build environment with Gnulib and a few other helpers).
+
+✅ Just run this:
+./bootstrap
+This will:
+Download Gnulib
+Set up the required build infrastructure
+Prepare configure script so you can run the next step
+Once that finishes successfully, you can continue with:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+
+Let me know how ./bootstrap goes — it might take a bit depending on your internet speed, but it’s all automatic. If it throws any missing dependencies, I can help you fix 'em fast. 💪
+what about the ./autogen.sh as per instructions ./bootstrap ./autogen.sh ./configure --with-platform=efi --target=i386 --program-prefix="" make
+Ah yes — great question! You're absolutely right to double-check.
+🔄 So here's the real deal:
+In the latest GRUB source, ./autogen.sh is basically deprecated in favor of ./bootstrap — and running ./bootstrap actually calls autogen.sh internally as part of its process.
+So:
+If you already ran ./bootstrap, you do NOT need to run ./autogen.sh again. You're good to move on to ./configure.
+If you run both, it usually doesn’t hurt, but it’s redundant and sometimes confuses the build system.
+
+✅ TL;DR: Your next steps are:
+./bootstrap  # (you already ran this or can do it now)
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+Let that make command cook — it’ll take a few minutes. If anything goes sideways, shoot me the error, and I’ll help you troubleshoot it like a boss. 😎
+Ready to fire off ./configure?
+remote: Total 254507 (delta 224543), reused 252394 (delta 223940) Receiving objects: 100% (254507/254507), 57.03 MiB | 221.00 KiB/s, done. Resolving deltas: 100% (224543/224543), done. From https://git.savannah.gnu.org/git/gnulib * branch 9f48fb992a3d7e96610c4ce8be969cff2d61a01b -> FETCH_HEAD Updating files: 100% (10617/10617), done. HEAD is now at 9f48fb992 filevercmp: fix several unexpected results Note: switching to '9f48fb992a3d7e96610c4ce8be969cff2d61a01b'. You are in 'detached HEAD' state. You can look around, make experimental changes and commit them, and you can discard any commits you make in this state without impacting any branches by switching back to a branch. If you want to create a new branch to retain commits you create, you may do so (now or later) by using -c with the switch command. Example: git switch -c <new-branch-name> Or undo this operation with: git switch - Turn off this advice by setting config variable advice.detachedHead to false HEAD is now at 9f48fb992 filevercmp: fix several unexpected results ./bootstrap: autopoint --force ./bootstrap: 941: autopoint: not found
+Ah, good catch — you're nearly there, but bootstrap tripped over a missing tool: autopoint.
+
+🧩 What's going on?
+autopoint is part of the gettext package. It's used during the build process to handle internationalization stuff, which GRUB's build system relies on.
+
+✅ Fix it with:
+sudo apt install gettext
+Then just re-run:
+./bootstrap
+Once that completes cleanly, you can move on to:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+
+You're really close to the finish line on the build prep — shout if any other errors pop up, I’ve got your back! 💪
+mal@DESKTOP-68R02G0:~/grub$ sudo apt install gettext [sudo] password for mal: Reading package lists... Done Building dependency tree... Done Reading state information... Done Suggested packages: autopoint gettext-doc libasprintf-dev libgettextpo-dev The following NEW packages will be installed: gettext 0 upgraded, 1 newly installed, 0 to remove and 141 not upgraded. Need to get 864 kB of archives. After this operation, 2695 kB of additional disk space will be used. Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 gettext amd64 0.21-14ubuntu2 [864 kB] Fetched 864 kB in 2s (373 kB/s) Selecting previously unselected package gettext. (Reading database ... 49193 files and directories currently installed.) Preparing to unpack .../gettext_0.21-14ubuntu2_amd64.deb ... Unpacking gettext (0.21-14ubuntu2) ... Setting up gettext (0.21-14ubuntu2) ... Processing triggers for man-db (2.12.0-4build2) ... Processing triggers for install-info (7.1-3build2) ... Processing triggers for libc-bin (2.39-0ubuntu8.4) ... mal@DESKTOP-68R02G0:~/grub$ ./bootstrap ./bootstrap: Bootstrapping from checked-out grub sources... ./bootstrap: consider installing git-merge-changelog from gnulib HEAD is now at 9f48fb992 filevercmp: fix several unexpected results ./bootstrap: autopoint --force ./bootstrap: 941: autopoint: not found mal@DESKTOP-68R02G0:~/grub$
+You're crushing it — just one last little snag. Even though gettext is installed, WSL (or your system) might not have added autopoint to your PATH correctly, or it installed the wrong subset.
+
+🔍 Let's double-check:
+Run:
+which autopoint
+If it returns nothing, that means autopoint still isn’t available on your system — which happens if gettext gets installed without its full set of binaries (sometimes an Ubuntu quirk).
+
+✅ Fix: Install gettext and its development tools:
+sudo apt install gettext autopoint
+Some distros split out autopoint into a separate package, but usually this will cover it. If autopoint isn’t found still, we can manually link it or install gettext from source (but usually that’s not needed).
+
+After that:
+Try again:
+./bootstrap
+Let me know what which autopoint says — if it shows something like /usr/bin/autopoint, we’re golden. 🥇
+mal@DESKTOP-68R02G0:~/grub$ sudo apt install gettext autopoint Reading package lists... Done Building dependency tree... Done Reading state information... Done gettext is already the newest version (0.21-14ubuntu2). The following NEW packages will be installed: autopoint 0 upgraded, 1 newly installed, 0 to remove and 141 not upgraded. Need to get 422 kB of archives. After this operation, 456 kB of additional disk space will be used. Do you want to continue? [Y/n] y Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 autopoint all 0.21-14ubuntu2 [422 kB] Fetched 422 kB in 2s (270 kB/s) Selecting previously unselected package autopoint. (Reading database ... 49300 files and directories currently installed.) Preparing to unpack .../autopoint_0.21-14ubuntu2_all.deb ... Unpacking autopoint (0.21-14ubuntu2) ... Setting up autopoint (0.21-14ubuntu2) ... Processing triggers for man-db (2.12.0-4build2) ...
+Boom! 🎯 That did it — autopoint is now installed and should be ready to roll.
+Let’s keep it moving. Go ahead and run:
+./bootstrap
+This time it should get all the way through without complaining about autopoint.
+
+Once that's done:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+That’s the GRUB build process right there. Let it compile (can take a few minutes), and then we’re off to creating bootia32.efi.
+Let me know how bootstrap and configure go — you're seriously right at the fun part. 😄
+Nice, thanks for the update — you're not stuck, you're just in the "heavy lifting" part of ./bootstrap. It’s working, just chewing through a ton of files from Gnulib. 🛠️
+That blinking cursor and silence is super normal at this stage — especially in WSL, where disk I/O can be slower, and there's no progress bar to keep you company. ☕ It's running this big command in the background:
+gnulib/gnulib-tool --import ...
+Which copies and configures a bunch of internal GRUB libraries.
+
+✅ What you can do now:
+Just let it run. It can take several minutes — totally depends on your system and whether the files are cached.
+
+⏳ Still stuck after 10+ mins?
+If it really seems frozen (no CPU usage at all), you can try:
+./bootstrap --no-git
+This skips some version-control-related checks that sometimes slow down or stall on WSL.
+
+You're soooo close to the fun part: compiling GRUB and making bootia32.efi. Let’s get it. 💪
+ok that parts done
+Let’s gooo! 🎉 Awesome work powering through that step — that's the biggest setup hurdle.
+
+🚀 Next up: Configure GRUB for 32-bit UEFI
+From inside your ~/grub directory, run:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+This step sets up the GRUB build to:
+🧱 Target i386 (32-bit) architecture
+🔧 Build for UEFI platform
+🎯 Use no prefix for installed binaries (grub-mkimage, not i386-grub-mkimage etc.)
+
+✅ If configure finishes cleanly:
+Move on to compiling GRUB:
+make
+This will take a few minutes (or a bit more if you're on WSL), and when it's done — you'll be ready to create your bootia32.efi!
+Let me know how the configure step goes — and if it throws any warnings or errors, drop them here and I’ll help you squash them.
+mal@DESKTOP-68R02G0:~/grub$ ./configure --with-platform=efi --target=i386 --program-prefix="" configure: error: cannot find required auxiliary files: missing install-sh config.guess config.sub compile
+Ah, classic! That error means ./bootstrap didn’t fully finish setting up some important build helper files like install-sh, config.guess, etc.
+But no worries — super common, especially in WSL — and it’s easy to fix. Here's how to get back on track:
+
+✅ Fix in Two Steps:
+Run ./bootstrap again — just in case it was interrupted:
+./bootstrap
+This time, it should complete much faster since most of the heavy work is already done.
+If it still gives the same error, use this command to pull in missing build scripts:
+autoreconf -i
+That will regenerate the missing install-sh, config.sub, config.guess, etc. using standard autotools.
+
+Then retry:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+Let me know how it goes — either you’ll be compiling GRUB in the next step, or I’ll help stomp the next issue fast. 💥
+Updating file grub-core/lib/gnulib/argp-fmtstream.c (backup in grub-core/lib/gnulib/argp-fmtstream.c~) Updating file grub-core/lib/gnulib/argp-help.c (backup in grub-core/lib/gnulib/argp-help.c~) Updating file grub-core/lib/gnulib/mbswidth.c (backup in grub-core/lib/gnulib/mbswidth.c~) Updating file grub-core/lib/gnulib/mbswidth.h (backup in grub-core/lib/gnulib/mbswidth.h~) Updating file m4/extern-inline.m4 (backup in m4/extern-inline.m4~) Finished. You may need to add #include directives for the following .h files. #include <fnmatch.h> #include <regex.h> #include <stdbool.h> #include <stdio.h> #include <stdlib.h> #include "argp.h" #include "base64.h" #include "error.h" #include "gettext.h" #include "mbswidth.h" #include "progname.h" #include "save-cwd.h" You may need to use the following Makefile variables when linking. Use them in <program>_LDADD when linking a program, or in <library>_a_LDFLAGS or <library>_la_LDFLAGS when linking a library. $(LIBTHREAD) $(LIB_HARD_LOCALE) $(LIB_MBRTOWC) $(LIB_SETLOCALE_NULL) $(LTLIBINTL) when linking with libtool, $(LIBINTL) otherwise $(LTLIBUNISTRING) when linking with libtool, $(LIBUNISTRING) otherwise Don't forget to - add "grub-core/lib/gnulib/Makefile" to AC_CONFIG_FILES in ./configure.ac, - mention "gnulib" in SUBDIRS in grub-core/lib/Makefile.am, - mention "-I m4" in ACLOCAL_AMFLAGS in Makefile.am or add an AC_CONFIG_MACRO_DIRS([m4]) invocation in ./configure.ac, - mention "m4/gnulib-cache.m4" in EXTRA_DIST in Makefile.am, - invoke gl_EARLY in ./configure.ac, right after AC_PROG_CC, - invoke gl_INIT in ./configure.ac. patching file argp-fmtstream.c patching file argp-help.c patching file mbswidth.c patching file mbswidth.h patching file Makefile.in.in patching file Makefile.in.in patching file Makefile.in.in patching file Makefile.in.in Using python3... Importing unicode... Importing libgcrypt... /home/mal/grub/util/import_gcry.py:108: SyntaxWarning: invalid escape sequence '\.' if re.match ("(Manifest|Makefile\.am|ac\.c|cipher\.c|hash-common\.c|hmac-tests\.c|md\.c|pubkey\.c)$", cipher_file) or cipher_file == "kdf.c" or cipher_file == "elgamal.c" or cipher_file == "primegen.c" or cipher_file == "ecc.c" or cipher_file == "test-getrusage.c": /home/mal/grub/util/import_gcry.py:112: SyntaxWarning: invalid escape sequence '\.' if re.match ("Makefile\.in$", cipher_file): /home/mal/grub/util/import_gcry.py:115: SyntaxWarning: invalid escape sequence '\.' if re.match (".*\.[ch]$", cipher_file): /home/mal/grub/util/import_gcry.py:116: SyntaxWarning: invalid escape sequence '\.' isc = re.match (".*\.c$", cipher_file) /home/mal/grub/util/import_gcry.py:204: SyntaxWarning: invalid escape sequence '\[' m = re.match ("(static byte|static unsigned char) (weak_keys_chksum)\[[0-9]*\] =", line) /home/mal/grub/util/import_gcry.py:296: SyntaxWarning: invalid escape sequence '\*' m = re.match ("static const char \*selftest.*;$", line) /home/mal/grub/util/import_gcry.py:298: SyntaxWarning: invalid escape sequence '\*' fname = line[len ("static const char \*"):] /home/mal/grub/util/import_gcry.py:334: SyntaxWarning: invalid escape sequence '\(' m = re.match ("static void \(\*progress_cb\).*;$", line) /home/mal/grub/util/import_gcry.py:343: SyntaxWarning: invalid escape sequence '\*' m = re.match ("static void \*progress_cb_data.*;$", line) /home/mal/grub/util/import_gcry.py:353: SyntaxWarning: invalid escape sequence '\*' m = re.match ("(static const char( |)\*|static gpg_err_code_t|void|static int|static gcry_err_code_t|static gcry_mpi_t|static void|void|static elliptic_curve_t) *$", line) /home/mal/grub/util/import_gcry.py:358: SyntaxWarning: invalid escape sequence '\(' m = re.match ("static int tripledes_set2keys \(.*\);", line) /home/mal/grub/util/import_gcry.py:361: SyntaxWarning: invalid escape sequence '\(' m = re.match ("static int tripledes_set3keys \(.*\);", line) /home/mal/grub/util/import_gcry.py:364: SyntaxWarning: invalid escape sequence '\(' m = re.match ("static int tripledes_set2keys \(", line) /home/mal/grub/util/import_gcry.py:368: SyntaxWarning: invalid escape sequence '\(' m = re.match ("static int tripledes_set3keys \(", line) /home/mal/grub/util/import_gcry.py:576: SyntaxWarning: invalid escape sequence '\*' m = re.match ("(const char( |)\*|void) *$", line) /home/mal/grub/util/import_gcry.py:581: SyntaxWarning: invalid escape sequence '\.' m = re.match ("#include \"mod-source-info\.h\"", line) WARNING: grub-core/lib/libgcrypt-grub already exists WARNING: grub-core/lib/libgcrypt-grub/cipher already exists WARNING: grub-core/lib/libgcrypt-grub/mpi already exists WARNING: grub-core/lib/libgcrypt-grub/src already exists Importing libtasn1... patching file grub-core/lib/libtasn1-grub/lib/coding.c patching file grub-core/lib/libtasn1-grub/lib/decoding.c patching file grub-core/lib/libtasn1-grub/lib/element.c patching file grub-core/lib/libtasn1-grub/lib/errors.c patching file grub-core/lib/libtasn1-grub/lib/structure.c patching file grub-core/lib/libtasn1-grub/libtasn1.h patching file grub-core/lib/libtasn1-grub/lib/gstr.c patching file grub-core/lib/libtasn1-grub/lib/decoding.c patching file grub-core/lib/libtasn1-grub/lib/element.c patching file grub-core/lib/libtasn1-grub/lib/int.h patching file grub-core/lib/libtasn1-grub/libtasn1.h patching file grub-core/lib/libtasn1-grub/lib/parser_aux.c patching file grub-core/lib/libtasn1-grub/lib/coding.c patching file grub-core/tests/asn1/tests/CVE-2018-1000654.c patching file grub-core/tests/asn1/tests/Test_overflow.c patching file grub-core/tests/asn1/tests/Test_simple.c patching file grub-core/tests/asn1/tests/Test_strings.c patching file grub-core/tests/asn1/tests/object-id-decoding.c patching file grub-core/tests/asn1/tests/object-id-encoding.c patching file grub-core/tests/asn1/tests/octet-string.c patching file grub-core/tests/asn1/tests/reproducers.c patching file grub-core/tests/asn1/tests/CVE-2018-1000654.c patching file grub-core/tests/asn1/tests/Test_overflow.c patching file grub-core/tests/asn1/tests/Test_simple.c patching file grub-core/tests/asn1/tests/Test_strings.c patching file grub-core/tests/asn1/tests/object-id-decoding.c patching file grub-core/tests/asn1/tests/object-id-encoding.c patching file grub-core/tests/asn1/tests/octet-string.c patching file grub-core/tests/asn1/tests/reproducers.c patching file grub-core/tests/asn1/tests/CVE-2018-1000654.c patching file grub-core/tests/asn1/tests/reproducers.c patching file grub-core/tests/asn1/tests/CVE-2018-1000654.c patching file grub-core/tests/asn1/tests/Test_overflow.c patching file grub-core/tests/asn1/tests/reproducers.c patching file grub-core/tests/asn1/tests/CVE-2018-1000654.c patching file grub-core/tests/asn1/tests/Test_overflow.c patching file grub-core/tests/asn1/tests/Test_simple.c patching file grub-core/tests/asn1/tests/Test_strings.c patching file grub-core/tests/asn1/tests/object-id-decoding.c patching file grub-core/tests/asn1/tests/object-id-encoding.c patching file grub-core/tests/asn1/tests/octet-string.c patching file grub-core/tests/asn1/tests/reproducers.c patching file grub-core/tests/asn1/tests/Test_overflow.c patching file grub-core/tests/asn1/tests/Test_simple.c patching file grub-core/tests/asn1/tests/Test_strings.c patching file grub-core/tests/asn1/tests/object-id-decoding.c patching file grub-core/tests/asn1/tests/object-id-encoding.c patching file grub-core/tests/asn1/tests/octet-string.c patching file grub-core/tests/asn1/tests/Test_overflow.c Generating Automake input... Saving timestamps... running: AUTOPOINT=true LIBTOOLIZE=true autoreconf --verbose --install --force -I m4 --no-recursive autoreconf: export WARNINGS= autoreconf: Entering directory '.' autoreconf: running: true --force autoreconf: running: aclocal -I m4 --force -I m4 autoreconf: configure.ac: tracing autoreconf: configure.ac: not using Libtool autoreconf: configure.ac: not using Intltool autoreconf: configure.ac: not using Gtkdoc autoreconf: running: /usr/bin/autoconf --include=m4 --force configure.ac:278: error: possibly undefined macro: AC_SUBST If this token and others are legitimate, please use m4_pattern_allow. See the Autoconf documentation. configure.ac:433: error: possibly undefined macro: AC_CHECK_HEADERS configure.ac:456: error: possibly undefined macro: AC_DEFINE configure.ac:524: error: possibly undefined macro: AC_LINK_IFELSE configure.ac:1773: error: possibly undefined macro: AC_LANG_CALL autoreconf: error: /usr/bin/autoconf failed with exit status: 1 ./bootstrap: autoreconf failed
+You're deep in the trenches now — and seriously doing an awesome job! 💪
+What you're seeing now is autoreconf complaining about missing m4 macros (like AC_SUBST, AC_DEFINE, etc.). This usually means one or more essential Autotools packages (like autoconf, automake, or m4) are either:
+Missing
+Not the right version
+Not found in your current environment
+
+✅ Let’s fix this with a full Autotools dependency install:
+Run this command to install (or re-install) everything GRUB’s build system expects:
+sudo apt install autoconf automake libtool m4 gettext texinfo
+(Yes, even if some are already installed — this ensures all the macros and helper scripts are in place.)
+
+Then try this again:
+./bootstrap
+No need to run autoreconf manually — ./bootstrap does it for you once everything's in place.
+
+Let me know how it goes — this is the last major roadblock before the actual configure and make steps work cleanly. You're basically one step from compiling GRUB and generating that magical bootia32.efi! 🧙‍♂️✨
+Generating Automake input... Saving timestamps... running: AUTOPOINT=true LIBTOOLIZE=true autoreconf --verbose --install --force -I m4 --no-recursive autoreconf: export WARNINGS= autoreconf: Entering directory '.' autoreconf: running: true --force autoreconf: running: aclocal -I m4 --force -I m4 autoreconf: configure.ac: tracing autoreconf: configure.ac: not using Libtool autoreconf: configure.ac: not using Intltool autoreconf: configure.ac: not using Gtkdoc autoreconf: running: /usr/bin/autoconf --include=m4 --force configure.ac:278: error: possibly undefined macro: AC_SUBST If this token and others are legitimate, please use m4_pattern_allow. See the Autoconf documentation. configure.ac:433: error: possibly undefined macro: AC_CHECK_HEADERS configure.ac:456: error: possibly undefined macro: AC_DEFINE configure.ac:524: error: possibly undefined macro: AC_LINK_IFELSE configure.ac:1773: error: possibly undefined macro: AC_LANG_CALL autoreconf: error: /usr/bin/autoconf failed with exit status: 1 ./bootstrap: autoreconf failed
+Alright, looks like we're still hitting a wall with missing macros. That usually means some core development packages are still missing — especially the ones that provide those common AC_* macros used by autoconf.
+Let’s brute-force this into working. 💥
+
+🔧 Run this full install command:
+This pulls in everything we need for autoconf, automake, m4 macros, and the toolchain.
+sudo apt install build-essential autoconf automake libtool pkg-config gettext texinfo bison flex m4
+Let’s break that down:
+build-essential: core dev tools (like gcc, make, g++, etc.)
+pkg-config: helps locate libraries
+bison, flex, m4: macro processors and generators used by configure.ac
+
+🧼 Then clean up any leftover cache (optional but helpful):
+make distclean || true
+git clean -xfd
+⚠️ This removes any previously generated build files — good to ensure a fresh start.
+
+🚀 Now retry:
+./bootstrap
+If that works (and it should now 🤞), follow with:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+
+Let me know if you still hit any snags — we’re close to GRUB magic happening! 🧙‍♀️
+mal@DESKTOP-68R02G0:~/grub$ make distclean || true make: *** No rule to make target 'distclean'. Stop.
+No worries, it seems that make distclean is not available because it hasn't been generated yet (we haven’t successfully run make yet). So, let’s skip that and move directly to cleaning up the repo using Git instead:
+Clean the repository with Git
+You can clean up the repo using:
+git clean -xfd
+This will remove untracked files and directories. It’s like hitting the reset button for the source code without affecting your committed changes.
+
+Now that we’ve cleaned up, try the following steps again:
+Ensure all dependencies are installed with:
+sudo apt install build-essential autoconf automake libtool pkg-config gettext texinfo bison flex m4
+Run the bootstrap script again:
+./bootstrap
+
+After that completes, you should be able to proceed with:
+./configure --with-platform=efi --target=i386 --program-prefix=""
+make
+Let me know how it goes!
+config.status: creating po/Makefile ******************************************************* GRUB2 will be compiled with following components: Platform: i386-efi With devmapper support: No (need libdevmapper header) With memory debugging: No With disk cache statistics: No With boot time statistics: No efiemu runtime: No (not available on efi) grub-mkfont: Yes grub-mount: No (need fuse or fuse3 libraries) grub-protect: No (need libtasn1 library) starfield theme: Yes With DejaVuSans font from /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf With libzfs support: No (need zfs library) Build-time grub-mkfont: Yes Without unifont Without liblzma (no support for XZ-compressed mips images) (need lzma library) With stack smashing protector: No *******************************************************
+🎉 BOOM! You did it — ./configure finished successfully! That means the toolchain is set up, dependencies are in order, and you’re now ready for the actual build.
+You're past the gnarliest part — nice persistence, seriously 🙌
+
+✅ Next step: Build GRUB
+In the same ~/grub directory, run:
+make
+This will take a few minutes — it's compiling GRUB specifically for 32-bit UEFI (i386-efi).
+
+Then, once that's done:
+cd grub-core
+../grub-mkimage -d . -o bootia32.efi -O i386-efi -p /boot/grub \
+ntfs hfs appleldr boot cat efi_gop efi_uga elf fat hfsplus iso9660 linux \
+keylayouts memdisk minicmd part_apple ext2 extcmd xfs xnu part_bsd part_gpt \
+search search_fs_file chain btrfs loadbios loadenv lvm minix minix2 reiserfs \
+memrw mmap msdospart scsi loopback normal configfile gzio all_video \
+gfxterm gettext echo eval
+This creates the magical ✨ bootia32.efi ✨ file.
+
+do i send those 1 line at a time
+Great question! You can actually run all of those commands as one block, but it’s safer and easier to troubleshoot if you do it one step at a time — especially since the make process can take a few minutes and might throw warnings (or errors if something goes off).
+
+Here's the smooth way to go:
+🛠️ Step 1: Build GRUB
+make
+This will compile everything. Let it run until it's done. If it finishes cleanly (no errors), then proceed.
+
+📁 Step 2: Change into the grub-core directory
+cd grub-core
+
+🧪 Step 3: Generate the bootia32.efi file
+../grub-mkimage -d . -o bootia32.efi -O i386-efi -p /boot/grub \
+ntfs hfs appleldr boot cat efi_gop efi_uga elf fat hfsplus iso9660 linux \
+keylayouts memdisk minicmd part_apple ext2 extcmd xfs xnu part_bsd part_gpt \
+search search_fs_file chain btrfs loadbios loadenv lvm minix minix2 reiserfs \
+memrw mmap msdospart scsi loopback normal configfile gzio all_video \
+gfxterm gettext echo eval
+You can paste that whole command at once — it's long but works as-is.
+
+YES! 🥳 You nailed it.
+No errors, clean exit — and now you’ve got your very own custom-built bootia32.efi file sitting right there in your ~/grub/grub-core directory. That’s the 32-bit UEFI bootloader you just compiled from source like a boss. 💪
+
+Here’s how to get it onto a USB stick in the standard UEFI format:
+
+🪛 Step 1: Plug in your USB drive and format it to FAT32
+If you're on WSL, it's easier to do this part in Windows Disk Management or a Linux Live USB. You can also list devices in WSL with:
+lsblk
+Or if it's already formatted and mounted in WSL (like /mnt/d or /mnt/e), that’s even easier.
+
+🗂️ Step 2: Create the EFI directory structure
+Adjust the path below based on where your USB is mounted. Let’s assume it's mounted at /mnt/e for example:
+mkdir -p /mnt/e/EFI/BOOT
+cp bootia32.efi /mnt/e/EFI/BOOT/
+🔁 Replace /mnt/e with your actual USB mount point.
+
+After that, your USB drive will look like:
+markdown
+EFI/
+└── BOOT/
+    └── bootia32.efi
+This is the UEFI standard path for booting from removable media on 32-bit UEFI systems.
+
+🧪 Final Step: Test it!
+You can either:
+Boot it on real hardware (32-bit UEFI laptop/tablet/netbook).
+Test it in QEMU (if you want to keep it virtual for now).
+Let me know which one you're aiming for and I’ll guide you through that part too! 🚀
+ok its not mounted i jsut formatted it and plugged it in
+
+🔍 Step 1: Find your USB device
+Run this to list your available storage devices:
+lsblk
+You're looking for something that wasn’t there before you plugged the USB in — typically named like sdb1, sdc1, etc. (Your main drive is usually sda or nvme0n1).
+Look for one that’s:
+Small-ish (like 4GB, 8GB, 16GB)
+Says part under the "TYPE"
+And doesn’t have a mountpoint yet
+Example output:
+nginx
+sdb      8:16   1  15G  0 disk 
+└─sdb1   8:17   1  15G  0 part 
+In this case, your USB is /dev/sdb1.
+
+💡 Step 2: Mount the USB manually
+Let’s create a mount point (if needed) and mount it:
+sudo mkdir -p /mnt/usb
+sudo mount /dev/sdX1 /mnt/usb
+🔁 Replace sdX1 with the name you found from lsblk, like sdb1.
+
+Once it’s mounted, run:
+mkdir -p /mnt/usb/EFI/BOOT
+cp bootia32.efi /mnt/usb/EFI/BOOT/
+
+✅ Step 4: Safely unmount
+Once copied, unmount the USB safely:
+sudo umount /mnt/usb
+Then you're ready to boot from it or test in QEMU. Let me know what you'd like to try next!
+mal@DESKTOP-68R02G0:~/grub/grub-core$ lsblk lsblk: failed to access sysfs directory: /sys/dev/block: No such file or directory mal@DESKTOP-68R02G0:~/grub/grub-core$
+Ah yep — that's because you're running WSL (Windows Subsystem for Linux), and WSL doesn't have direct access to the Linux /dev system in the same way a real Linux kernel does. That's why lsblk fails — there's no /sys/dev/block in WSL.
+But no worries — WSL mounts Windows drives under /mnt/ automatically. Let’s find your USB that way instead. 👇
+
+🔍 Step 1: List mounted Windows drives
+Run this:
+ls /mnt/
+You’ll see something like:
+r
+c  d  e  f
+Each letter corresponds to a Windows drive (your C: drive, D:, etc.). If you just plugged in a USB, it’s likely the highest letter (like e or f).
+
+📂 Step 2: Peek inside to confirm it’s your USB
+Try checking one of them:
+ls /mnt/e
+Do you see an empty volume or any familiar files? If it's blank or freshly formatted, that’s your guy.
+
+Assuming /mnt/e is your USB, do:
+mkdir -p /mnt/e/EFI/BOOT
+cp bootia32.efi /mnt/e/EFI/BOOT/
+Replace /mnt/e with the correct letter if your USB is at a different one.
+
+Let me know what you see in /mnt/ and I’ll confirm if it looks right. Almost there! 🚀
+mal@DESKTOP-68R02G0:~/grub/grub-core$ ls /mnt c mal@DESKTOP-68R02G0:~/grub/grub-core$
+Got it — looks like WSL is only mounting your main C: drive right now, and not your USB.
+That likely means WSL just isn’t seeing the USB device at all yet — this is common, especially if you’ve formatted it recently.
+Here’s how we can fix it:
+
+🧰 Step 1: Enable USB access in WSL (WSL 2 required)
+Make sure you're using WSL 2 (not WSL 1). Run:
+wsl --status
+You should see something like:
+vbnet
+Default Version: 2
+
+Distributions:
+Ubuntu (Default)
+    Version: 2
+If you're on WSL 1, let me know — you’ll need to upgrade to use USB passthrough.
+
+🔌 Step 2: Use usbipd to mount the USB device inside WSL
+This part happens in PowerShell (outside of WSL):
+Open PowerShell as Administrator
+Run:
+powershell
+usbipd wsl list
+This shows attached USB devices. You should see your USB stick listed, something like:
+ruby
+BUSID  VID:PID    DEVICE
+1-3    0781:5567  USB Mass Storage Device
+Now attach it to WSL:
+powershell
+usbipd wsl attach --busid 1-3
+(Replace 1-3 with your USB’s BUSID)
+Go back into WSL and try this again:
+ls /mnt
+You should now see more mount points — like d, e, f, etc.
+
+Just like before:
+mkdir -p /mnt/e/EFI/BOOT
+cp bootia32.efi /mnt/e/EFI/BOOT/
+(Replace /mnt/e with the right path if it’s different.)
+
+Let me know how far you get — I can guide through any USB quirks! You're so close 🔥
+mal@DESKTOP-68R02G0:~/grub/grub-core$ wsl --status Command 'wsl' not found, but can be installed with: sudo apt install wsl mal@DESKTOP-68R02G0:~/grub/grub-core$
+Ah yep — that’s a common mix-up 🔄
+You're running the wsl --status command inside WSL, but that command needs to be run from Windows PowerShell, not the Linux terminal.
+
+🧭 Here’s what to do next:
+Open PowerShell as Administrator
+Click Start → type powershell
+Right-click → “Run as administrator”
+In the PowerShell window, run:
+powershell
+wsl --status
+This will tell you whether you're running WSL 1 or WSL 2, which is important because USB passthrough only works with WSL 2 using usbipd.
+Once you do that, send me the output, and I’ll walk you through the USB setup from there 🙌
+We're nearly at the finish line — just need to bridge that USB into WSL!
+ubuntu version 2
+Perfect — you're on WSL 2, which means you're good to go for USB device passthrough using usbipd! 🚀
+
+✅ Now let’s get your USB drive connected in WSL:
+🧰 Step 1: In PowerShell (Administrator)
+Still in the same PowerShell window (run as admin), do:
+powershell
+usbipd wsl list
+You should see output like this:
+ruby
+BUSID  VID:PID    DEVICE
+1-3    0781:5567  USB Mass Storage Device
+Find your USB stick in that list — you can often identify it by “Mass Storage” or the brand name.
+
+🧲 Step 2: Attach USB to WSL
+Once you know the BUSID, run:
+powershell
+usbipd wsl attach --busid 1-3
+Replace 1-3 with your USB’s actual BUSID.
+
+🗂️ Step 3: Back in your WSL terminal
+After attaching the USB, in your WSL (Ubuntu) terminal, run:
+ls /mnt
+You should now see something like:
+r
+c  d  e  f
+One of these new ones is your USB stick.
+
+If your USB shows up under /mnt/e, run:
+mkdir -p /mnt/e/EFI/BOOT
+cp bootia32.efi /mnt/e/EFI/BOOT/
+Change /mnt/e to the correct one if it’s different.
+
+Let me know what usbipd wsl list shows you — I’ll guide you from there. You're this close to having your EFI USB ready! 💪🖥️
+PS C:\Windows\system32> usbipd wsl list usbipd : The term 'usbipd' is not recognized as the name of a cmdlet
+Ah yep, looks like usbipd isn’t installed yet — no worries! Let’s get that set up real quick 👇
+
+🛠️ Step-by-Step: Install usbipd for WSL 2 USB support
+✅ 1. Download & Install usbipd-win
+Go to the official GitHub release page:
+👉 https://github.com/dorssel/usbipd-win/releases
+Download the latest .msi installer, for example:
+usbipd-win-x.x.x.msi
+Once downloaded, run the installer and follow the setup wizard.
+
+✅ 2. After install, open PowerShell as Administrator again, and try:
+powershell
+usbipd wsl list
+This time it should work and list any USB devices attached.
+
+✅ 3. If it still doesn’t recognize the command...
+You may need to restart your computer once after installing usbipd.
+After rebooting, repeat:
+powershell
+usbipd wsl list
+
+PS C:\Windows\system32> usbipd wsl list usbipd : usbipd: error: The 'wsl' subcommand has been removed. Learn about the new syntax at https://learn.microsoft.com/windows/wsl/connect-usb#attach-a-usb-device. At line:1 char:1 + usbipd wsl list + ~~~~~~~~~~~~~~~ + CategoryInfo : NotSpecified: (usbipd: error: ...h-a-usb-device.:String) [], RemoteException + FullyQualifiedErrorId : NativeCommandError
+Perfect — that’s actually helpful! It means you have usbipd-win installed now, but Microsoft changed the syntax recently. No worries — let’s use the updated way to connect your USB drive to WSL 2. 💡
+
+✅ Updated USBIPD-WIN Syntax for WSL 2 (2024+)
+🔍 1. List USB Devices
+Run this in PowerShell (as Administrator):
+powershell
+usbipd list
+You’ll get output like:
+ruby
+BUSID  VID:PID    DEVICE
+1-5    0781:5567  SanDisk Cruzer Blade
+Look for your USB device by name (like “SanDisk”, “Kingston”, “USB Mass Storage” etc.)
+
+🔗 2. Attach USB Device to WSL
+Once you know the BUSID (example: 1-5), run:
+powershell
+usbipd attach --busid 1-5 --wsl
+Replace 1-5 with your actual BUSID.
+
+⏳ 3. Back in WSL
+Now switch back to your WSL Ubuntu terminal, and run:
+lsblk
+
+Let me know what usbipd list shows and we’ll take the next step together. 🚀
+PS C:\Windows\system32> usbipd bind --busid 2-6 PS C:\Windows\system32> usbipd attach --busid 2-6 --wsl usbipd : usbipd: error: This program only works with WSL 2 distributions. Learn how to upgrade at https://learn.microsoft.com/windows/wsl/basic-commands#set-wsl-version-to-1-or-2. At line:1 char:1 + usbipd attach --busid 2-6 --wsl + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + CategoryInfo : NotSpecified: (usbipd: error: ...sion-to-1-or-2.:String) [], RemoteException + FullyQualifiedErrorId : NativeCommandError 
+It looks like you're getting an error saying the program only works with WSL 2. To resolve this, we need to make sure your WSL distribution is set to version 2.
+Here's how you can upgrade your WSL distribution to version 2:
+
+Steps to Check and Set WSL Version to 2
+Check your current WSL version:
+In PowerShell, run this command to list all installed WSL distributions and their version:
+powershell
+wsl --list --verbose
+The output will look something like this:
+pgsql
+NAME            STATE           VERSION
+* Ubuntu-20.04    Running         1
+If it shows version 1 for your Ubuntu, you need to upgrade it to version 2.
+Set the distribution to WSL 2:
+Run this command to set your Ubuntu distribution (or the one you're using) to use WSL 2:
+powershell
+wsl --set-version Ubuntu-20.04 2
+Replace Ubuntu-20.04 with the name of your distribution if it's different (e.g., Ubuntu, Ubuntu-22.04, etc.).
+Verify the change:
+After the upgrade completes, rerun the command to check the WSL version:
+powershell
+wsl --list --verbose
+It should now show VERSION 2 for your distribution.
+
+After Upgrading to WSL 2
+Once you've confirmed your distribution is set to WSL 2, try the usbipd attach command again:
+powershell
+usbipd attach --busid 2-6 --wsl
+Then, go back to your WSL terminal and check if your USB device is visible using lsblk.
+Let me know how it goes!
+PS C:\Windows\system32> wsl --list --verbose N A M E S T A T E V E R S I O N * U b u n t u R u n n i n g 1 
+Since your WSL version is currently set to WSL 1, you'll need to upgrade it to WSL 2. Let's proceed with the steps to set your Ubuntu distribution to version 2.
+Steps to Set WSL to Version 2
+Set Ubuntu to WSL 2:
+Run the following command in PowerShell to convert Ubuntu to WSL 2:
+powershell
+wsl --set-version Ubuntu 2
+This will upgrade your Ubuntu distribution to WSL 2. The process might take a little while, depending on your system.
+Verify the Version Change:
+After the command finishes, check again to ensure that the Ubuntu distribution is now running WSL 2:
+powershell
+wsl --list --verbose
+You should see something like this:
+pgsql
+NAME      STATE           VERSION
+* Ubuntu  Running         2
+After Setting WSL to Version 2
+Once your Ubuntu distribution is upgraded to WSL 2, retry the usbipd attach command:
+powershell
+usbipd attach --busid 2-6 --wsl
+Then, return to your WSL terminal and check if the USB device is visible with:
+lsblk
+Let me know if you encounter any issues during this process!
+running the upgrade now --list verbose says stopped
+It looks like your Ubuntu distribution is currently stopped while the upgrade is in progress. That's normal, as WSL 2 requires a restart of the distribution.
+Once the upgrade is completed, follow these steps:
+Check Status After Upgrade
+Ensure the Upgrade Completed:
+After the upgrade finishes, check the status again:
+powershell
+wsl --list --verbose
+Your distribution should now show as running with version 2.
+Start the Ubuntu Distribution:
+If it's still showing as "stopped," you can manually start your Ubuntu distribution by running:
+powershell
+wsl -d Ubuntu
+This will start the WSL session for Ubuntu.
+Verify the USB Device in WSL 2:
+After starting the Ubuntu distribution, you can proceed to attach your USB device again with:
+powershell
+usbipd attach --busid 2-6 --wsl
+Check for the Device in WSL:
+Once the USB device is attached, check if it's available inside your WSL environment:
+lsblk
+Let me know if you need further assistance!
+wsl --set-version Ubuntu 2 takes a long time gives no update how do i know when done
+The wsl --set-version Ubuntu 2 command can indeed take a while, especially if it's a large distribution, as it involves converting your WSL 1 environment to WSL 2. Unfortunately, there isn't a real-time progress indicator, but you can try these methods to check its progress and confirm when it's done:
+1. Check WSL Status Using wsl --list --verbose
+You can check the progress by running this command in PowerShell while the conversion is happening:
+powershell
+wsl --list --verbose
+If the conversion is in progress, you'll see the State of your Ubuntu distribution as Converting. Once it's complete, it will show as Running with version 2.
+If it’s still taking too long or seems stuck, there are a few other ways to confirm progress.
+2. Monitor System Resources (Optional)
+While the conversion happens, you can open Task Manager (Ctrl+Shift+Esc) and check CPU and disk usage. If you notice high disk activity and CPU usage, it’s likely that the process is still ongoing.
+3. Restart Your PC (Optional)
+If it’s taking an unusually long time without any progress update, you can try restarting your computer. After a reboot, you can run the wsl --list --verbose command again to check if the conversion has completed.
+4. Check WSL Logs (Optional)
+You can check the logs to see if there’s any specific issue causing delays. These logs can be accessed from Event Viewer.
+Press Win + X and select Event Viewer.
+In Event Viewer, navigate to Applications and Services Logs -> Microsoft -> Windows -> Subsystem for Linux.
+Look for any logs that might indicate errors during the conversion.
+Once the conversion finishes, your Ubuntu distribution should be set to version 2, and you can run it by typing wsl -d Ubuntu in PowerShell.
+Let me know if it completes or if you encounter any issues!
+no state is stopped
+If the state of your WSL 2 conversion is showing as "Stopped," it means that your Ubuntu instance is currently not running. This can sometimes happen during or after a conversion from WSL 1 to WSL 2. Here are a few things you can try to resolve this issue:
+1. Start the Ubuntu WSL 2 Instance Manually
+Try manually starting the Ubuntu WSL instance. You can do this by running the following command in PowerShell:
+powershell
+wsl -d Ubuntu
+If the instance starts correctly, you should see the Ubuntu terminal. If it doesn't, proceed to the next steps.
+2. Restart WSL Services
+Sometimes, restarting the WSL service can help fix issues with the distribution's state. To do this:
+Open PowerShell as Administrator and run the following command to restart the WSL service:
+powershell
+Restart-Service LxssManager
+After restarting, try running:
+powershell
+wsl -d Ubuntu
+If this works, your Ubuntu instance should start, and you should be able to continue with your tasks.
+3. Check for WSL 2 Configuration Issues
+If you suspect that there was an issue during the conversion or there is an issue with your WSL 2 setup, you can check if everything is properly configured for WSL 2.
+Ensure WSL 2 is enabled:
+Run the following command to confirm that WSL 2 is available:
+powershell
+wsl --set-default-version 2
+Check the virtual machine infrastructure (VM) used by WSL 2 is running. Open PowerShell as Administrator and run:
+powershell
+wsl --list --verbose
+It should show Ubuntu with version 2 if the conversion was successful. If the status is still "Stopped," try manually starting the instance again with the command above.
+4. Reinstall the WSL 2 Kernel
+If the conversion is still not working, it could be related to an issue with the WSL 2 kernel. You can reinstall or update the WSL 2 kernel by following these steps:
+Go to WSL 2 Kernel Update and download the latest WSL 2 Linux kernel update.
+Install the update and restart your machine.
+After the update, run:
+powershell
+wsl --set-version Ubuntu 2
+5. Unregister and Reinstall Ubuntu (if needed)
+If none of the above methods work and your instance remains in the "Stopped" state, you might need to unregister and reinstall Ubuntu. Warning: This will remove all data in the Ubuntu instance, so make sure to back up your important files.
+To unregister Ubuntu:
+powershell
+wsl --unregister Ubuntu
+Then, reinstall Ubuntu from the Microsoft Store:
+Open the Microsoft Store and search for "Ubuntu".
+Install it again.
+After reinstalling, try running the wsl --set-version Ubuntu 2 command again.
+6. Check for Other Errors or Logs
+If you're still having issues, you can check logs for more detailed error information. To check logs related to WSL, use the Event Viewer as mentioned earlier.
+If the problem persists, feel free to provide more details, and I can guide you through additional troubleshooting steps.
+wsl -s ubuntu just hangs there
+If the command wsl -s Ubuntu just hangs and doesn't return anything, there are a few steps you can take to troubleshoot and resolve the issue. It seems like your Ubuntu instance is having trouble starting, either due to configuration issues or something preventing WSL from functioning correctly. Here's a step-by-step guide to help you resolve it:
+1. Force Shutdown and Restart WSL
+Try to force WSL to shut down and then restart it.
+Force Shutdown WSL:
+Open PowerShell as Administrator.
+Run the following command to forcefully stop all running WSL instances:
+powershell
+wsl --shutdown
+This will stop all WSL instances, including Ubuntu.
+Restart WSL:
+Once it's shut down, try to start Ubuntu again:
+powershell
+wsl -d Ubuntu
+Check if the instance starts now.
+2. Check for WSL Services
+Sometimes, the WSL service itself might not be running properly. To ensure WSL is functioning correctly, you can restart the service:
+Open PowerShell as Administrator and run:
+powershell
+Restart-Service LxssManager
+After the service has restarted, try running:
+powershell
+wsl -d Ubuntu
+3. Set WSL Version to 2 Manually
+If your Ubuntu instance is still stuck on WSL 1, you may need to force it into WSL 2 manually.
+First, check your current WSL version for Ubuntu by running:
+powershell
+wsl --list --verbose
+This will show you the WSL version for each distribution. If it's still showing WSL 1, proceed to step 2.
+To set Ubuntu to use WSL 2 explicitly:
+powershell
+wsl --set-version Ubuntu 2
+Wait for a while and check if it completes successfully. If it doesn't, proceed to the next step.
+4. Reset WSL Configuration
+If the issue persists, reset WSL to its default configuration. This will not delete your Linux distributions, but it will reset the WSL environment.
+Open PowerShell as Administrator and run:
+powershell
+wsl --unregister Ubuntu
+Warning: This will remove the current instance of Ubuntu. Your files will be lost unless backed up.
+After unregistering, reinstall Ubuntu from the Microsoft Store.
+Once installed, try running the following again:
+powershell
+wsl -d Ubuntu
+5. Check WSL Kernel and Windows Version
+Make sure your WSL 2 kernel is up-to-date and that your system is fully updated. Here's how:
+Check for Windows Updates:
+Open Settings -> Update & Security -> Windows Update -> Check for Updates.
+Ensure all updates are installed.
+Install the latest WSL 2 kernel:
+Download the latest WSL 2 kernel from here.
+Run the installer after downloading.
+Ensure WSL 2 is enabled by running:
+powershell
+wsl --set-default-version 2
+After installing updates, restart your computer and try again.
+6. Inspect Logs for Errors
+If Ubuntu is still not starting properly, you can inspect the WSL logs to see if any errors are being logged.
+Open Event Viewer.
+Go to Windows Logs -> Application.
+Look for errors related to LxssManager (which is the WSL manager).
+These logs can provide additional details about what might be going wrong.
+
+7. Final Option: Reinstall WSL
+If everything fails, you might consider reinstalling WSL entirely. This is a more drastic step but can help if there is a persistent configuration issue.
+Uninstall WSL:
+Open PowerShell as Administrator.
+Run the following command to unregister WSL:
+powershell
+wsl --unregister Ubuntu
+Reinstall WSL:
+Open the Microsoft Store, search for "Ubuntu," and reinstall it.
+Set WSL Version to 2:
+After reinstalling, set the version to 2:
+powershell
+wsl --set-version Ubuntu 2
+Conclusion
+Hopefully, one of these steps helps you resolve the issue. Let me know if any of these steps work or if you're still encountering difficulties, and I can assist you further!
+
+
+
+Attach
+
+Search
+Reason
+Voice
+ChatGPT can make mistakes. Check important info.
+?
+Help us improve your experience
+We use cookies and similar technologies to deliver, maintain, and improve our services, and for security purposes. We also use these technologies to understand how users interact with our services (including the effectiveness of our ad campaigns). Learn more in our Cookie Policy.
+Reject non-essential
+Accept all

@@ -1,0 +1,40 @@
+Skip to content
+ChatGPT
+Log in
+Sign up
+Awesome! Thanks for sharing that — looks like you’ve got the full roadmap for building a 32-bit UEFI bootloader using GRUB, nice and clean. 💻🚀
+Are you ready to pick it up from here? Or want to go deeper into any step — like:
+🧰 Automating the build (tweaking build.sh / bootstrap.sh)
+🎛️ Customizing the GRUB menu to actually boot a Linux ISO
+🧪 Testing more OSes (maybe Debian, Arch, or a lightweight distro)
+🧩 Dual-booting with something funky — like Android x86 or BlissOS?
+💡 Or even just turning this into a rescue USB tool?
+Let me know where you're at in the process — happy to keep it beginner-friendly and help you build something slick.
+all sent well until this Fetched 33.3 MB in 14s (2381 kB/s) Reading package lists... Done Building dependency tree... Done Reading state information... Done 148 packages can be upgraded. Run 'apt list --upgradable' to see them. mal@DESKTOP-68R02G0:~$ sudo apt install git bison libselinux-dev autogen m4 \ > autoconfig help2man libopt25-dev flex libfont-freetype-perl automake \ > autotools-dev libfreetype6-dev texinfo Reading package lists... Done Building dependency tree... Done Reading state information... Done Note, selecting 'libselinux1-dev' instead of 'libselinux-dev' Note, selecting 'libfreetype-dev' instead of 'libfreetype6-dev' E: Unable to locate package autoconfig E: Unable to locate package libopt25-dev
+Great catch! You're super close — just a couple of small typos in the package names. Here's the fix:
+
+✅ Corrected Package Names:
+autoconfig → autoconf ✅
+libopt25-dev → libopts25-dev ✅ (note the s at the end of opts)
+
+🔧 Updated Command:
+Run this instead:
+sudo apt update
+sudo apt install git bison libopts25 libselinux1-dev autogen m4 \
+autoconf help2man libopts25-dev flex libfont-freetype-perl automake \
+autotools-dev libfreetype-dev texinfo
+
+Once that finishes cleanly, you’re good to go to the next step (cloning GRUB).
+Let me know if any of those packages still complain — WSL sometimes misses a couple depending on the distro version. I’ve got workarounds if needed. 👨‍💻💪
+Want me to help you with the GRUB build step next or just chill while you test this?
+Cloning into 'grub'... remote: Counting objects: 103532, done. remote: Compressing objects: 100% (24318/24318), done. remote: Total 103532 (delta 77475), reused 102572 (delta 76760) Receiving objects: 100% (103532/103532), 72.41 MiB | 103.00 KiB/s, done. Resolving deltas: 100% (77475/77475), done. Updating files: 100% (1929/1929), done. mal@DESKTOP-68R02G0:~$ cd grub mal@DESKTOP-68R02G0:~/grub$ ./autogen.sh Gnulib not yet bootstrapped; run ./bootstrap instead. mal@DESKTOP-68R02G0:~/grub$
+Perfect — you're flying through this! 🚀
+GRUB's telling you that instead of running ./autogen.sh directly, you need to bootstrap it first (basically setting up the build environment with Gnulib and a few other helpers).
+
+✅ Just run this:
+./bootstrap
+This will:
+Download Gnulib
+Set up the required build infrastructure
+Prepare configure scrip
+...
